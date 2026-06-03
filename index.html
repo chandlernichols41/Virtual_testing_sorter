@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<!--
+  ABC Virtual Session Uploader
+  ════════════════════════════════════════════════════════════════════
+  FIRST-TIME SETUP (do this once):
+
+  1. DROPBOX APP
+     a. Go to https://www.dropbox.com/developers/apps/create
+     b. Choose "Scoped Access" → "Full Dropbox"
+     c. Name it anything (e.g. "ABC Session Uploader")
+     d. After creation, copy the "App key" from the Settings tab
+     e. Under "OAuth 2" → "Redirect URIs", add your GitHub Pages URL
+        e.g.  https://YOUR-USERNAME.github.io/abc-uploader/
+        (The trailing slash matters — match it exactly)
+     f. Under the "Permissions" tab, enable:  files.content.write
+        Then click "Submit" to save permissions.
+     g. Paste the App key below to replace  YOUR_APP_KEY_HERE
+
+  2. GITHUB PAGES
+     a. Create a free account at github.com if you don't have one
+     b. Create a new public repository named  abc-uploader
+     c. Upload this file as  index.html
+     d. Go to Settings → Pages → Source: "Deploy from a branch"
+        Branch: main  /  folder: / (root)  → Save
+     e. Your URL will be: https://YOUR-USERNAME.github.io/abc-uploader/
+
+  3. Open that URL on any computer — no Python or installation needed.
+  ════════════════════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABC Virtual Session Uploader</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      background: #1a56db;
+      color: white;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .app-header h1   { font-size: 18px; font-weight: 600; }
+    .app-header small { font-size: 13px; opacity: .8; display: block; margin-top: 2px; }
+
+    /* ── Layout ── */
+    .container { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; }
+
+    /* ── Cards ── */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    }
+    .card-title {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .step-badge {
+      width: 24px; height: 24px;
+      background: #1a56db; color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .card-title h2 { font-size: 15px; font-weight: 600; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 10px 20px; border-radius: 8px; border: none;
+      cursor: pointer; font-size: 14px; font-weight: 500;
+      transition: background .15s, opacity .15s;
+    }
+    .btn-blue    { background: #1a56db; color: white; }
+    .btn-blue:hover:not(:disabled)  { background: #1345b5; }
+    .btn-green   { background: #0f9d58; color: white; }
+    .btn-green:hover:not(:disabled) { background: #0c7a44; }
+    .btn-lg      { width: 100%; padding: 13px; font-size: 15px; border-radius: 10px; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Connected badge ── */
+    .connected-badge {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: #e6f4ea; color: #1e7e34;
+      padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    }
+    .live-dot {
+      width: 9px; height: 9px;
+      background: #1e7e34; border-radius: 50%;
+    }
+    .btn-disconnect {
+      margin-left: 6px; background: none;
+      border: 1px solid #1e7e34; border-radius: 5px;
+      padding: 3px 9px; cursor: pointer; font-size: 12px; color: #1e7e34;
+    }
+
+    /* ── Setup banner ── */
+    .setup-banner {
+      background: #fff8e1; border: 1px solid #ffc107;
+      border-radius: 10px; padding: 16px 18px; margin-bottom: 18px;
+      font-size: 13px; color: #7b5800; line-height: 1.6;
+    }
+    .setup-banner strong { display: block; font-size: 14px; margin-bottom: 6px; }
+    .setup-banner code {
+      background: rgba(0,0,0,.07); padding: 2px 5px;
+      border-radius: 3px; font-family: monospace; font-size: 12px;
+    }
+    .setup-banner ol { margin-left: 18px; margin-top: 8px; }
+    .setup-banner a  { color: #7b5800; }
+
+    /* ── Form ── */
+    .form-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label {
+      font-size: 11px; font-weight: 700; color: #666;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .form-group input,
+    .form-group select {
+      padding: 8px 11px; border: 1.5px solid #ddd;
+      border-radius: 8px; font-size: 14px; outline: none;
+      background: white; transition: border-color .15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: #1a56db; }
+    .abc-id-row { display: flex; align-items: stretch; }
+    .abc-prefix {
+      padding: 8px 10px;
+      background: #f4f4f4; border: 1.5px solid #ddd;
+      border-right: none; border-radius: 8px 0 0 8px;
+      font-size: 14px; font-weight: 600; color: #555;
+      display: flex; align-items: center;
+    }
+    .abc-id-row input { border-radius: 0 8px 8px 0; width: 78px; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed #ccc; border-radius: 12px; padding: 44px 28px;
+      text-align: center; cursor: pointer; background: #fafafa;
+      transition: all .2s; user-select: none;
+    }
+    .drop-zone:hover       { border-color: #1a56db; background: #f0f4ff; }
+    .drop-zone.dragover    { border-color: #1a56db; background: #e8effe; border-style: solid; }
+    .drop-zone.loaded-ok   { border-color: #0f9d58; background: #f0faf4; border-style: solid; }
+    .drop-zone.loaded-err  { border-color: #d32f2f; background: #fff5f5; border-style: solid; }
+    .drop-icon   { font-size: 42px; margin-bottom: 10px; }
+    .drop-zone p { font-size: 15px; font-weight: 500; color: #333; margin-bottom: 5px; }
+    .drop-zone small { font-size: 13px; color: #888; }
+
+    /* ── Task list ── */
+    .task-list { display: flex; flex-direction: column; gap: 5px; }
+    .task-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      border: 1.5px solid #e8e8e8; background: #fafafa;
+    }
+    .task-row.has-file  { border-color: #b5dfc6; background: #f5fbf7; }
+    .task-row.no-file   { border-color: #f5e0a0; background: #fffbf0; }
+    .task-num  { font-size: 12px; font-weight: 700; color: #999; width: 54px; flex-shrink: 0; }
+    .task-label { font-size: 12px; color: #777; width: 130px; flex-shrink: 0; }
+    .task-input {
+      flex: 1; padding: 5px 9px;
+      border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 13px; font-family: monospace; outline: none;
+    }
+    .task-input:focus { border-color: #1a56db; }
+    .file-badge {
+      font-size: 11px; font-weight: 600; padding: 2px 8px;
+      border-radius: 4px; flex-shrink: 0;
+    }
+    .file-badge.found   { background: #e6f4ea; color: #1e7e34; }
+    .file-badge.missing { background: #fff8e1; color: #7b5800; }
+
+    /* ── Preview ── */
+    .preview-grid { display: flex; flex-direction: column; gap: 4px; }
+    .preview-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 10px; background: #f5f5f5; border-radius: 6px;
+    }
+    .preview-name { font-family: monospace; font-size: 13px; flex: 1; }
+    .preview-size { font-size: 12px; color: #888; flex-shrink: 0; }
+    .preview-empty { font-size: 13px; color: #aaa; font-style: italic; }
+
+    /* ── Progress ── */
+    .progress-list { display: flex; flex-direction: column; gap: 13px; }
+    .progress-item { display: flex; flex-direction: column; gap: 5px; }
+    .progress-header { display: flex; justify-content: space-between; font-size: 13px; }
+    .progress-name { font-family: monospace; color: #333; }
+    .progress-pct  { color: #999; }
+    .progress-track { background: #e8e8e8; border-radius: 6px; height: 6px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; border-radius: 6px; background: #1a56db;
+      transition: width .3s ease;
+    }
+    .progress-fill.done  { background: #0f9d58; }
+    .progress-fill.error { background: #d32f2f; }
+
+    /* ── Alerts ── */
+    .alert { padding: 11px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 12px; line-height: 1.5; }
+    .alert-error   { background: #fdecea; color: #b71c1c; border: 1px solid #f5c6cb; }
+    .alert-success { background: #e6f4ea; color: #1e7e34; border: 1px solid #c3e6cb; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div style="font-size:30px; line-height:1">📹</div>
+  <div>
+    <h1>ABC Virtual Session Uploader</h1>
+    <small>Rename Zoom recordings and upload directly to Dropbox</small>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Setup banner — only shown when app key is not configured -->
+  <div class="setup-banner hidden" id="setup-banner">
+    <strong>⚙️ One-time setup required</strong>
+    This tool needs a Dropbox App Key before it can authenticate.
+    Open this HTML file in a text editor and replace <code>YOUR_APP_KEY_HERE</code>
+    with your Dropbox App Key, then re-upload to GitHub Pages. Full instructions are
+    in the comment at the top of the HTML file.
+  </div>
+
+  <!-- ── Step 1: Auth ── -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-badge">1</div>
+      <h2>Connect to Dropbox</h2>
+    </div>
+    <div id="auth-area">
+      <p style="font-size:14px;color:#555;margin-bottom:14px">
+        Sign in to your Dropbox account so files can be uploaded.
+        You'll be redirected back here automatically.
+      </p>
+      <button class="btn btn-blue" id="auth-btn" onclick="startAuth()">
+        Sign in to Dropbox
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Session Info ── -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-badge">2</div>
+      <h2>Session Info</h2>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Participant ID</label>
+        <div class="abc-id-row">
+          <span class="abc-prefix">ABC</span>
+          <input type="text" id="abc-id" placeholder="1529" maxlength="4"
+                 oninput="updatePreview()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Session Date</label>
+        <input type="date" id="session-date" oninput="updatePreview()" style="width:170px">
+      </div>
+      <div class="form-group">
+        <label>Participant Sex <span style="font-weight:400;text-transform:none;font-size:11px">(for PCR)</span></label>
+        <select id="pcr-sex" onchange="updatePreview()" style="width:110px">
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 3: Load Files ── -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-badge">3</div>
+      <h2>Load Recording Folder</h2>
+    </div>
+    <div class="drop-zone" id="drop-zone"
+         onclick="triggerPicker()"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave()"
+         ondrop="onDrop(event)">
+      <div class="drop-icon">📂</div>
+      <p>Drop the Zoom recording folder here</p>
+      <small>or click to browse — select the inner folder containing video1.mp4, video2.mp4 …</small>
+    </div>
+    <!-- webkitdirectory lets user select an entire folder -->
+    <input type="file" id="file-input" webkitdirectory multiple style="display:none"
+           onchange="onPickerChange(event)">
+  </div>
+
+  <!-- ── Step 4: Task Names ── -->
+  <div class="card hidden" id="mapping-card">
+    <div class="card-title">
+      <div class="step-badge">4</div>
+      <h2>Task Names</h2>
+    </div>
+    <p style="font-size:13px;color:#666;margin-bottom:13px">
+      Videos are pre-assigned in the standard order. Edit a name here if this
+      session differs — the filename will update in the preview below.
+    </p>
+    <div class="task-list" id="task-list"></div>
+  </div>
+
+  <!-- ── Preview ── -->
+  <div class="card hidden" id="preview-card">
+    <div class="card-title" style="margin-bottom:12px">
+      <div style="font-size:19px">👁</div>
+      <h2>Renamed Files Preview</h2>
+    </div>
+    <div class="preview-grid" id="preview-grid">
+      <div class="preview-empty">Fill in participant ID and date, and load files to preview.</div>
+    </div>
+  </div>
+
+  <!-- ── Step 5: Upload ── -->
+  <div class="card hidden" id="upload-card">
+    <div class="card-title">
+      <div class="step-badge">5</div>
+      <h2>Upload to Dropbox</h2>
+    </div>
+    <p style="font-size:13px;color:#555;margin-bottom:14px">
+      Destination:
+      <code style="background:#f0f0f0;padding:2px 7px;border-radius:4px;font-size:12px">
+        /ABC Virtual Testing Behavioral Data/ABC<span id="dest-id">####</span>/
+      </code>
+    </p>
+    <div id="error-area"></div>
+    <button class="btn btn-green btn-lg" id="upload-btn" onclick="startUpload()">
+      ☁&nbsp; Upload to Dropbox
+    </button>
+  </div>
+
+  <!-- ── Progress ── -->
+  <div class="card hidden" id="progress-card">
+    <div class="card-title">
+      <div style="font-size:19px">⬆️</div>
+      <h2>Upload Progress</h2>
+    </div>
+    <div class="progress-list" id="progress-list"></div>
+    <div id="done-banner" style="margin-top:16px"></div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIGURATION
+// ═══════════════════════════════════════════════════════════════
+const DROPBOX_APP_KEY = 'YOUR_APP_KEY_HERE';
+const DROPBOX_ROOT    = '/ABC Virtual Testing Behavioral Data';
+const CHUNK_SIZE      = 8 * 1024 * 1024; // 8 MB per chunk
+
+// Fixed task order — video number → task info
+const TASKS = [
+  { num: 1, label: 'Months Backwards', name: 'MonthsBackwards' },
+  { num: 2, label: 'Sentence Rep',     name: 'SentenceRep'     },
+  { num: 3, label: 'CTOPP',            name: 'CTOPP'           },
+  { num: 4, label: 'Cookie Theft',     name: 'CookieTheft'     },
+  { num: 5, label: 'Cat Rescue',       name: 'CatRescue'       },
+  { num: 6, label: 'PCR',              name: 'PCR', hasSex: true },
+  { num: 7, label: 'PBJ',              name: 'PBJ'             },
+  { num: 8, label: 'Pilot',            name: 'Pilot'           },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let accessToken = null;
+let videoFiles  = {}; // { taskNum (int) → File }
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  if (DROPBOX_APP_KEY === 'YOUR_APP_KEY_HERE') {
+    document.getElementById('setup-banner').classList.remove('hidden');
+    document.getElementById('auth-btn').disabled = true;
+  }
+
+  // Restore token from this browser session
+  const saved = sessionStorage.getItem('dbx_token');
+  if (saved) { accessToken = saved; renderConnected(); }
+
+  // Handle Dropbox OAuth redirect
+  handleOAuthCallback();
+
+  // Default date to today
+  const today = new Date();
+  const pad   = n => String(n).padStart(2, '0');
+  document.getElementById('session-date').value =
+    `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+  updatePreview();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  DROPBOX AUTH  (PKCE — no client secret needed)
+// ═══════════════════════════════════════════════════════════════
+async function startAuth() {
+  const verifier  = randomBase64URL(32);
+  const challenge = await sha256Base64URL(verifier);
+  sessionStorage.setItem('pkce_verifier', verifier);
+
+  const redirectURI = location.origin + location.pathname;
+  const url = new URL('https://www.dropbox.com/oauth2/authorize');
+  url.searchParams.set('client_id',             DROPBOX_APP_KEY);
+  url.searchParams.set('response_type',         'code');
+  url.searchParams.set('code_challenge',        challenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  url.searchParams.set('redirect_uri',          redirectURI);
+  location.href = url.toString();
+}
+
+async function handleOAuthCallback() {
+  const params   = new URLSearchParams(location.search);
+  const code     = params.get('code');
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  if (!code || !verifier) return;
+
+  history.replaceState({}, '', location.pathname); // strip ?code= from URL
+
+  const body = new URLSearchParams({
+    code,
+    grant_type:    'authorization_code',
+    client_id:     DROPBOX_APP_KEY,
+    code_verifier: verifier,
+    redirect_uri:  location.origin + location.pathname,
+  });
+
+  try {
+    const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST', body,
+    });
+    const json = await resp.json();
+    if (json.access_token) {
+      accessToken = json.access_token;
+      sessionStorage.setItem('dbx_token', accessToken);
+      renderConnected();
+    } else {
+      showErrors('upload', ['Dropbox sign-in failed: ' + (json.error_description || JSON.stringify(json))]);
+    }
+  } catch (e) {
+    showErrors('upload', ['Network error during sign-in: ' + e.message]);
+  }
+}
+
+function renderConnected() {
+  document.getElementById('auth-area').innerHTML = `
+    <div class="connected-badge">
+      <div class="live-dot"></div>
+      Connected to Dropbox
+      <button class="btn-disconnect" onclick="disconnect()">Disconnect</button>
+    </div>`;
+  maybeShowUploadCard();
+}
+
+function disconnect() {
+  accessToken = null;
+  sessionStorage.removeItem('dbx_token');
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILE LOADING
+// ═══════════════════════════════════════════════════════════════
+function triggerPicker() {
+  document.getElementById('file-input').click();
+}
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('dragover');
+}
+function onDragLeave() {
+  document.getElementById('drop-zone').classList.remove('dragover');
+}
+
+async function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const files = [];
+
+  for (const item of Array.from(e.dataTransfer.items || [])) {
+    if (item.kind !== 'file') continue;
+    const entry = item.webkitGetAsEntry?.();
+    if (entry?.isDirectory) {
+      await collectFromDir(entry, files);
+    } else if (entry?.isFile) {
+      files.push(await fileFromEntry(entry));
+    } else {
+      const f = item.getAsFile();
+      if (f) files.push(f);
+    }
+  }
+  processFiles(files);
+}
+
+function collectFromDir(dirEntry, out) {
+  return new Promise(resolve => {
+    dirEntry.createReader().readEntries(async entries => {
+      for (const e of entries) {
+        if (e.isDirectory) await collectFromDir(e, out);
+        else out.push(await fileFromEntry(e));
+      }
+      resolve();
+    });
+  });
+}
+function fileFromEntry(e) { return new Promise(r => e.file(r)); }
+
+function onPickerChange(ev) {
+  processFiles(Array.from(ev.target.files));
+  ev.target.value = ''; // allow re-selecting same folder
+}
+
+function processFiles(files) {
+  videoFiles = {};
+
+  files.forEach(f => {
+    if (!f.name.toLowerCase().endsWith('.mp4')) return;
+    const n = extractTaskNum(f.name);
+    if (n !== null) videoFiles[n] = f;
+  });
+
+  const count = Object.keys(videoFiles).length;
+  const zone  = document.getElementById('drop-zone');
+  zone.classList.remove('dragover');
+
+  if (count === 0) {
+    zone.classList.add('loaded-err');
+    zone.classList.remove('loaded-ok');
+    zone.innerHTML = `
+      <div class="drop-icon">⚠️</div>
+      <p style="color:#b71c1c">No matching video files found</p>
+      <small>Expected video1.mp4 … video8.mp4 — click to try again</small>`;
+    return;
+  }
+
+  zone.classList.add('loaded-ok');
+  zone.classList.remove('loaded-err');
+  zone.innerHTML = `
+    <div class="drop-icon">✅</div>
+    <p>${count} video${count !== 1 ? 's' : ''} loaded</p>
+    <small>Click to change</small>`;
+
+  renderTaskList();
+  updatePreview();
+  maybeShowUploadCard();
+}
+
+// Zoom names files  video1021779609.mp4 — task number is the first digit.
+// Since tasks are 1-8 (single digit), taking the first digit of the numeric
+// suffix reliably extracts the task number regardless of the session suffix.
+function extractTaskNum(filename) {
+  const m = filename.match(/^video(\d)/i);
+  if (!m) return null;
+  const n = parseInt(m[1]);
+  return (n >= 1 && n <= 8) ? n : null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TASK LIST RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderTaskList() {
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+
+  TASKS.forEach(task => {
+    const found = !!videoFiles[task.num];
+    const div   = document.createElement('div');
+    div.className = `task-row ${found ? 'has-file' : 'no-file'}`;
+    div.innerHTML = `
+      <span class="task-num">Video ${task.num}</span>
+      <span class="task-label">${task.label}</span>
+      <input class="task-input" id="ti-${task.num}" value="${task.name}"
+             oninput="updatePreview()" title="Edit the filename segment">
+      <span class="file-badge ${found ? 'found' : 'missing'}">
+        ${found ? '✓ found' : '⚠ missing'}
+      </span>`;
+    list.appendChild(div);
+  });
+
+  document.getElementById('mapping-card').classList.remove('hidden');
+  document.getElementById('preview-card').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PREVIEW
+// ═══════════════════════════════════════════════════════════════
+function formatDate(isoDate) {
+  if (!isoDate) return null;
+  const [y, m, d] = isoDate.split('-');
+  return `${parseInt(m)}.${parseInt(d)}.${y.slice(2)}`;
+}
+
+function fmtBytes(b) {
+  return b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(1)+' MB';
+}
+
+function buildName(taskName, abcId, dateStr, sex) {
+  const t = taskName === 'PCR' ? `PCR.${sex}` : taskName;
+  return `ABC${abcId}_${t}_${dateStr}.mp4`;
+}
+
+function updatePreview() {
+  const abcId   = document.getElementById('abc-id').value.trim();
+  const dateStr = formatDate(document.getElementById('session-date').value);
+  const sex     = document.getElementById('pcr-sex').value;
+
+  document.getElementById('dest-id').textContent = abcId || '####';
+
+  const grid = document.getElementById('preview-grid');
+  if (!abcId || !dateStr || Object.keys(videoFiles).length === 0) {
+    grid.innerHTML = '<div class="preview-empty">Fill in participant ID and date, and load files to preview.</div>';
+    return;
+  }
+
+  const rows = TASKS
+    .filter(t => videoFiles[t.num])
+    .map(t => {
+      const name = document.getElementById(`ti-${t.num}`)?.value || t.name;
+      const fname = buildName(name, abcId, dateStr, sex);
+      return `<div class="preview-row">
+        <span class="preview-name">${fname}</span>
+        <span class="preview-size">${fmtBytes(videoFiles[t.num].size)}</span>
+      </div>`;
+    });
+
+  grid.innerHTML = rows.length
+    ? rows.join('')
+    : '<div class="preview-empty">No files found to preview.</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UPLOAD
+// ═══════════════════════════════════════════════════════════════
+function maybeShowUploadCard() {
+  if (accessToken && Object.keys(videoFiles).length > 0) {
+    document.getElementById('upload-card').classList.remove('hidden');
+  }
+}
+
+async function startUpload() {
+  const abcId   = document.getElementById('abc-id').value.trim();
+  const dateStr = formatDate(document.getElementById('session-date').value);
+  const sex     = document.getElementById('pcr-sex').value;
+  const errArea = document.getElementById('error-area');
+  errArea.innerHTML = '';
+
+  const errs = [];
+  if (!/^\d{4}$/.test(abcId)) errs.push('Enter a 4-digit participant ID (e.g. 1529).');
+  if (!dateStr)                errs.push('Select the session date.');
+  if (!accessToken)            errs.push('Connect to Dropbox first.');
+  if (Object.keys(videoFiles).length === 0) errs.push('Load the session folder first.');
+  if (errs.length) { showErrors('error-area', errs); return; }
+
+  const uploads = TASKS
+    .filter(t => videoFiles[t.num])
+    .map(t => ({
+      file:    videoFiles[t.num],
+      newName: buildName(document.getElementById(`ti-${t.num}`)?.value || t.name, abcId, dateStr, sex),
+    }));
+
+  if (!uploads.length) {
+    showErrors('error-area', ['No files to upload.']);
+    return;
+  }
+
+  // Lock button, show progress section
+  document.getElementById('upload-btn').disabled = true;
+  const progCard = document.getElementById('progress-card');
+  progCard.classList.remove('hidden');
+  document.getElementById('progress-list').innerHTML = uploads.map((u, i) => `
+    <div class="progress-item">
+      <div class="progress-header">
+        <span class="progress-name">${u.newName}</span>
+        <span class="progress-pct" id="pp-${i}">Waiting…</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="pb-${i}" style="width:0"></div>
+      </div>
+    </div>`).join('');
+  progCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Create destination folder (ignore "already exists" error)
+  const folder = `${DROPBOX_ROOT}/ABC${abcId}`;
+  try { await dbxCreateFolder(folder); } catch (_) {}
+
+  // Upload each file sequentially
+  let allOk = true;
+  for (let i = 0; i < uploads.length; i++) {
+    const { file, newName } = uploads[i];
+    try {
+      setBar(i, 1, 'Uploading…');
+      await uploadFile(file, `${folder}/${newName}`, pct => setBar(i, pct, `${pct}%`));
+      setBar(i, 100, 'Done ✓', 'done');
+    } catch (e) {
+      setBar(i, 100, 'Error: ' + e.message, 'error');
+      allOk = false;
+    }
+  }
+
+  document.getElementById('done-banner').innerHTML = allOk
+    ? `<div class="alert alert-success">✓ All files uploaded to /ABC Virtual Testing Behavioral Data/ABC${abcId}/</div>`
+    : `<div class="alert alert-error">Some uploads failed — check the errors above.</div>`;
+
+  document.getElementById('upload-btn').disabled = false;
+}
+
+function setBar(i, pct, label, state) {
+  const bar = document.getElementById(`pb-${i}`);
+  const lbl = document.getElementById(`pp-${i}`);
+  if (bar) {
+    bar.style.width = pct + '%';
+    if (state === 'done')  bar.classList.add('done');
+    if (state === 'error') bar.classList.add('error');
+  }
+  if (lbl) lbl.textContent = label;
+}
+
+function showErrors(containerId, errs) {
+  document.getElementById(containerId).innerHTML =
+    errs.map(e => `<div class="alert alert-error">${e}</div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DROPBOX API HELPERS
+// ═══════════════════════════════════════════════════════════════
+async function dbxPost(url, extraHeaders, body) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, ...extraHeaders },
+    body,
+  });
+  if (resp.status === 401) {
+    accessToken = null;
+    sessionStorage.removeItem('dbx_token');
+    throw new Error('Dropbox session expired — please disconnect and sign in again.');
+  }
+  return resp;
+}
+
+async function dbxCreateFolder(path) {
+  const resp = await dbxPost(
+    'https://api.dropboxapi.com/2/files/create_folder_v2',
+    { 'Content-Type': 'application/json' },
+    JSON.stringify({ path, autorename: false }),
+  );
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    if (err?.error?.path?.['.tag'] === 'conflict') return; // folder already exists
+    throw new Error(err?.error_summary || `Create folder failed (${resp.status})`);
+  }
+}
+
+async function uploadFile(file, destPath, onPct) {
+  if (file.size <= CHUNK_SIZE) {
+    // Small file — single request
+    onPct(20);
+    const resp = await dbxPost(
+      'https://content.dropboxapi.com/2/files/upload',
+      {
+        'Dropbox-API-Arg': JSON.stringify({ path: destPath, mode: 'overwrite' }),
+        'Content-Type': 'application/octet-stream',
+      },
+      file,
+    );
+    if (!resp.ok) throw new Error(`Upload failed (${resp.status})`);
+    onPct(100);
+    return;
+  }
+
+  // Large file — upload session (chunked)
+  let offset = 0, sessionId = null;
+
+  while (offset < file.size) {
+    const chunk  = file.slice(offset, offset + CHUNK_SIZE);
+    const isLast = offset + chunk.size >= file.size;
+
+    if (offset === 0) {
+      const resp = await dbxPost(
+        'https://content.dropboxapi.com/2/files/upload_session/start',
+        { 'Dropbox-API-Arg': JSON.stringify({ close: false }),
+          'Content-Type': 'application/octet-stream' },
+        chunk,
+      );
+      if (!resp.ok) throw new Error('Upload session start failed');
+      sessionId = (await resp.json()).session_id;
+
+    } else if (isLast) {
+      const resp = await dbxPost(
+        'https://content.dropboxapi.com/2/files/upload_session/finish',
+        { 'Dropbox-API-Arg': JSON.stringify({
+            cursor: { session_id: sessionId, offset },
+            commit: { path: destPath, mode: 'overwrite' },
+          }),
+          'Content-Type': 'application/octet-stream' },
+        chunk,
+      );
+      if (!resp.ok) throw new Error('Upload session finish failed');
+
+    } else {
+      const resp = await dbxPost(
+        'https://content.dropboxapi.com/2/files/upload_session/append_v2',
+        { 'Dropbox-API-Arg': JSON.stringify({
+            cursor: { session_id: sessionId, offset }, close: false,
+          }),
+          'Content-Type': 'application/octet-stream' },
+        chunk,
+      );
+      if (!resp.ok) throw new Error('Upload session append failed');
+    }
+
+    offset += chunk.size;
+    onPct(Math.min(97, Math.round((offset / file.size) * 100)));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PKCE CRYPTO HELPERS
+// ═══════════════════════════════════════════════════════════════
+function randomBase64URL(byteLen) {
+  const a = new Uint8Array(byteLen);
+  crypto.getRandomValues(a);
+  return btoa(String.fromCharCode(...a))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function sha256Base64URL(str) {
+  const data = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+</script>
+</body>
+</html>

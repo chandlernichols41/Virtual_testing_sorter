@@ -14,7 +14,7 @@
         (The trailing slash matters — match it exactly)
      f. Under the "Permissions" tab, enable:  files.content.write
         Then click "Submit" to save permissions.
-     g. Paste the App key below to replace  YOUR_APP_KEY_HERE
+     g. Paste the App key below to replace  YOUR_APP_KEY_HERE  (the placeholder in the script tag)
 
   2. GITHUB PAGES
      a. Create a free account at github.com if you don't have one
@@ -234,9 +234,9 @@
   <div class="setup-banner hidden" id="setup-banner">
     <strong>⚙️ One-time setup required</strong>
     This tool needs a Dropbox App Key before it can authenticate.
-    Open this HTML file in a text editor and replace <code>YOUR_APP_KEY_HERE</code>
-    with your Dropbox App Key, then re-upload to GitHub Pages. Full instructions are
-    in the comment at the top of the HTML file.
+    The Dropbox App Key placeholder was not replaced during deployment.
+    Check that the <code>DROPBOX_APP_KEY</code> secret is set in your repo
+    (Settings → Secrets → Actions) and re-run the workflow.
   </div>
 
   <!-- ── Step 1: Auth ── -->
@@ -389,7 +389,7 @@ let videoFiles  = {}; // { taskNum (int) → File }
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  if (DROPBOX_APP_KEY === 'YOUR_APP_KEY_HERE') {
+  if (DROPBOX_APP_KEY === 'YOUR_APP_KEY' + '_HERE') {
     document.getElementById('setup-banner').classList.remove('hidden');
     document.getElementById('auth-btn').disabled = true;
   }

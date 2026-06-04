@@ -485,31 +485,59 @@ async function verifyAndConnect() {
 
     // For Dropbox Business team accounts the team folder lives in the team
     // root namespace, not the personal namespace the API defaults to.
-    // We must send Dropbox-API-Path-Root on every call to reach the right place.
     const rootInfo = acct.root_info;
-    if (rootInfo && rootInfo.root_namespace_id !== rootInfo.home_namespace_id) {
-      pathRootHdr = JSON.stringify({
-        '.tag': 'namespace_id',
-        'namespace_id': rootInfo.root_namespace_id,
-      });
+    const rootNs   = rootInfo?.root_namespace_id;
+    const homeNs   = rootInfo?.home_namespace_id;
+    if (rootNs && rootNs !== homeNs) {
+      pathRootHdr = JSON.stringify({ '.tag': 'namespace_id', 'namespace_id': rootNs });
     }
 
-    // 2. Check the destination folder exists and is accessible
-    const folderResp = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ path: DROPBOX_ROOT }),
-    });
+    // 2. Check folder is accessible — try personal ns first, then team ns, then shared folders
+    let folderOk = false;
     let folderWarning = '';
-    if (!folderResp.ok) {
+    let nsDebug = `root_ns=${rootNs || 'none'} home_ns=${homeNs || 'none'} pathRoot=${pathRootHdr ? 'team' : 'personal'}`;
+
+    // Try with whatever namespace is active (dbxPost includes pathRootHdr)
+    const folderResp = await dbxPost(
+      'https://api.dropboxapi.com/2/files/get_metadata',
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ path: DROPBOX_ROOT }),
+    );
+    if (folderResp.ok) {
+      folderOk = true;
+    } else {
+      // Try mounting via sharing API — folder may be shared but not mounted
+      const mountResp = await dbxPost(
+        'https://api.dropboxapi.com/2/sharing/list_folders',
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({ limit: 100 }),
+      );
+      if (mountResp.ok) {
+        const shared = await mountResp.json();
+        const match  = (shared.entries || []).find(
+          e => e.name === 'ABC Virtual Testing Behavioral Data'
+        );
+        if (match) {
+          if (!match.path_lower) {
+            // Not mounted yet — mount it now
+            await dbxPost(
+              'https://api.dropboxapi.com/2/sharing/mount_folder',
+              { 'Content-Type': 'application/json' },
+              JSON.stringify({ shared_folder_id: match.shared_folder_id }),
+            ).catch(() => null);
+          }
+          folderOk = true;
+        }
+      }
+    }
+
+    if (!folderOk) {
       const ferr = await folderResp.json().catch(() => ({}));
       folderWarning = `<div class="alert alert-error" style="margin-top:10px">
-        ⚠️ Cannot access destination folder "${DROPBOX_ROOT}" —
-        ${ferr.error_summary || folderResp.status}.<br>
-        Make sure this Dropbox account has access to that folder.
+        ⚠️ Cannot reach "${DROPBOX_ROOT}" — ${ferr.error_summary || folderResp.status}.<br>
+        <small style="opacity:.8">${nsDebug}</small><br>
+        The Dropbox account owner needs to invite <strong>${email}</strong> as an Editor
+        of the "ABC Virtual Testing Behavioral Data" folder.
       </div>`;
     }
 
@@ -521,7 +549,7 @@ async function verifyAndConnect() {
       </div>
       ${folderWarning}`;
 
-    if (!folderWarning) maybeShowUploadCard();
+    if (folderOk) maybeShowUploadCard();
 
   } catch (e) {
     accessToken = null;

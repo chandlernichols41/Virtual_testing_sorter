@@ -222,13 +222,78 @@
 
 <header class="app-header">
   <div style="font-size:30px; line-height:1">📹</div>
-  <div>
+  <div style="flex:1">
     <h1>ABC Virtual Session Uploader</h1>
     <small>Rename Zoom recordings and upload directly to Dropbox</small>
   </div>
+  <button onclick="toggleHelp()" style="background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.5);color:white;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0" title="Help">?</button>
 </header>
 
 <div class="container">
+
+  <!-- ── Help Panel ── -->
+  <div class="card hidden" id="help-panel" style="border:2px solid #1a56db">
+    <div class="card-title" style="margin-bottom:12px">
+      <div style="font-size:20px">📖</div>
+      <h2>How to use this app</h2>
+      <button onclick="toggleHelp()" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#999">×</button>
+    </div>
+
+    <h3 style="font-size:13px;font-weight:700;color:#1a56db;margin-bottom:6px">What it does</h3>
+    <p style="font-size:13px;color:#444;margin-bottom:14px;line-height:1.6">
+      After a virtual ABC session, Zoom saves recordings as generic numbered files
+      (video1.mp4, video2.mp4 …). This app renames each file to the ABC naming
+      convention and uploads them directly to the lab's Dropbox — no Python, no
+      installation, works in any browser on any computer.
+    </p>
+
+    <h3 style="font-size:13px;font-weight:700;color:#1a56db;margin-bottom:8px">Step-by-step</h3>
+    <ol style="font-size:13px;color:#444;line-height:2;margin-left:18px;margin-bottom:14px">
+      <li><strong>Connect to Dropbox</strong> — sign in with your lab Dropbox account. You only need to do this once per browser session.</li>
+      <li><strong>Participant ID</strong> — enter the 4-digit ABC number (e.g. 1529). No need to type "ABC".</li>
+      <li><strong>Session Date</strong> — pick the date the session was recorded.</li>
+      <li><strong>Participant Sex</strong> — select Female or Male. This only affects the PCR filename.</li>
+      <li><strong>Load Recording Folder</strong> — click the folder area and navigate <em>into</em> the inner Zoom folder (the one that contains video1.mp4, video2.mp4, etc.), then click Select Folder. You can also drag-and-drop the folder.</li>
+      <li><strong>Review task names</strong> — the 8 tasks are pre-filled in the standard order. Edit any name if a session ran tasks in a different order.</li>
+      <li><strong>Check the preview</strong> — confirm the filenames look correct before uploading.</li>
+      <li><strong>Upload to Dropbox</strong> — click the green button. A progress bar tracks each file. When all bars are green, the files are in Dropbox under <code>ABC Virtual Testing Behavioral Data / ABC####/</code>.</li>
+    </ol>
+
+    <h3 style="font-size:13px;font-weight:700;color:#1a56db;margin-bottom:8px">Standard task order</h3>
+    <table style="font-size:13px;border-collapse:collapse;width:100%;margin-bottom:14px">
+      <thead>
+        <tr style="background:#f0f4ff">
+          <th style="padding:6px 10px;text-align:left;border:1px solid #dde">Video #</th>
+          <th style="padding:6px 10px;text-align:left;border:1px solid #dde">Task</th>
+          <th style="padding:6px 10px;text-align:left;border:1px solid #dde">Filename segment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:5px 10px;border:1px solid #eee">1</td><td style="padding:5px 10px;border:1px solid #eee">Months Backwards</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">MonthsBackwards</td></tr>
+        <tr style="background:#fafafa"><td style="padding:5px 10px;border:1px solid #eee">2</td><td style="padding:5px 10px;border:1px solid #eee">Sentence Repetition</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">SentenceRep</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #eee">3</td><td style="padding:5px 10px;border:1px solid #eee">CTOPP</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">CTOPP</td></tr>
+        <tr style="background:#fafafa"><td style="padding:5px 10px;border:1px solid #eee">4</td><td style="padding:5px 10px;border:1px solid #eee">Cookie Theft</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">CookieTheft</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #eee">5</td><td style="padding:5px 10px;border:1px solid #eee">Cat Rescue</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">CatRescue</td></tr>
+        <tr style="background:#fafafa"><td style="padding:5px 10px;border:1px solid #eee">6</td><td style="padding:5px 10px;border:1px solid #eee">Peer Conflict Resolution</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">PCR.female / PCR.male</td></tr>
+        <tr><td style="padding:5px 10px;border:1px solid #eee">7</td><td style="padding:5px 10px;border:1px solid #eee">PBJ</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">PBJ</td></tr>
+        <tr style="background:#fafafa"><td style="padding:5px 10px;border:1px solid #eee">8</td><td style="padding:5px 10px;border:1px solid #eee">Pilot</td><td style="padding:5px 10px;border:1px solid #eee;font-family:monospace">Pilot</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-size:13px;font-weight:700;color:#1a56db;margin-bottom:6px">File naming format</h3>
+    <p style="font-size:13px;color:#444;margin-bottom:6px;line-height:1.6">
+      Each file is renamed to: <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px">ABC####_TaskName_M.D.YY.mp4</code><br>
+      Example: <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px">ABC1529_CookieTheft_3.5.26.mp4</code>
+    </p>
+
+    <h3 style="font-size:13px;font-weight:700;color:#1a56db;margin-bottom:6px;margin-top:14px">How it knows which video is which task</h3>
+    <p style="font-size:13px;color:#444;line-height:1.6">
+      Zoom names each recording segment with a number prefix — video<strong>1</strong>021779609.mp4,
+      video<strong>2</strong>021779609.mp4, etc. The first digit is the task number.
+      The app reads that digit and maps it to the task in the standard order above.
+      If a task ran in a different slot, you can reassign it in the Task Names section before uploading.
+    </p>
+  </div>
 
   <!-- Setup banner — only shown when app key is not configured -->
   <div class="setup-banner hidden" id="setup-banner">
@@ -267,7 +332,7 @@
         <label>Participant ID</label>
         <div class="abc-id-row">
           <span class="abc-prefix">ABC</span>
-          <input type="text" id="abc-id" placeholder="1529" maxlength="4"
+          <input type="text" id="abc-id" placeholder="####" maxlength="4"
                  oninput="updatePreview()">
         </div>
       </div>
@@ -386,6 +451,14 @@ let accessToken  = null;
 let pathRootHdr  = null; // Dropbox-API-Path-Root for team namespace
 let videoFiles   = {}; // { taskNum (int) → File }
 
+function toggleHelp() {
+  const panel = document.getElementById('help-panel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════
@@ -401,12 +474,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Handle Dropbox OAuth redirect
   handleOAuthCallback();
-
-  // Default date to today
-  const today = new Date();
-  const pad   = n => String(n).padStart(2, '0');
-  document.getElementById('session-date').value =
-    `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 
   updatePreview();
 });

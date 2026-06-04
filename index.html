@@ -396,7 +396,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Restore token from this browser session
   const saved = sessionStorage.getItem('dbx_token');
-  if (saved) { accessToken = saved; renderConnected(); }
+  if (saved) { accessToken = saved; verifyAndConnect(); }
 
   // Handle Dropbox OAuth redirect
   handleOAuthCallback();
@@ -452,23 +452,72 @@ async function handleOAuthCallback() {
     if (json.access_token) {
       accessToken = json.access_token;
       sessionStorage.setItem('dbx_token', accessToken);
-      renderConnected();
+      await verifyAndConnect();
     } else {
-      showErrors('upload', ['Dropbox sign-in failed: ' + (json.error_description || JSON.stringify(json))]);
+      showErrors('auth-area', ['Dropbox sign-in failed: ' + (json.error_description || JSON.stringify(json))]);
     }
   } catch (e) {
-    showErrors('upload', ['Network error during sign-in: ' + e.message]);
+    showErrors('auth-area', ['Network error during sign-in: ' + e.message]);
   }
 }
 
-function renderConnected() {
+async function verifyAndConnect() {
+  // Show a temporary "checking..." state
   document.getElementById('auth-area').innerHTML = `
-    <div class="connected-badge">
-      <div class="live-dot"></div>
-      Connected to Dropbox
-      <button class="btn-disconnect" onclick="disconnect()">Disconnect</button>
+    <div class="connected-badge" style="background:#e8f0fe;color:#1557b0">
+      <div class="live-dot" style="background:#1557b0"></div>
+      Verifying Dropbox access…
     </div>`;
-  maybeShowUploadCard();
+
+  try {
+    // 1. Confirm token works and get account email
+    const acctResp = await fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!acctResp.ok) {
+      const err = await acctResp.json().catch(() => ({}));
+      throw new Error(`Token invalid (${acctResp.status}): ${err.error_summary || JSON.stringify(err)}`);
+    }
+    const acct = await acctResp.json();
+    const email = acct.email || acct.name?.display_name || 'Unknown account';
+
+    // 2. Check the destination folder exists and is accessible
+    const folderResp = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path: DROPBOX_ROOT }),
+    });
+    let folderWarning = '';
+    if (!folderResp.ok) {
+      const ferr = await folderResp.json().catch(() => ({}));
+      folderWarning = `<div class="alert alert-error" style="margin-top:10px">
+        ⚠️ Cannot access destination folder "${DROPBOX_ROOT}" —
+        ${ferr.error_summary || folderResp.status}.<br>
+        Make sure this Dropbox account has access to that folder.
+      </div>`;
+    }
+
+    document.getElementById('auth-area').innerHTML = `
+      <div class="connected-badge">
+        <div class="live-dot"></div>
+        Connected as <strong>${email}</strong>
+        <button class="btn-disconnect" onclick="disconnect()">Disconnect</button>
+      </div>
+      ${folderWarning}`;
+
+    if (!folderWarning) maybeShowUploadCard();
+
+  } catch (e) {
+    accessToken = null;
+    sessionStorage.removeItem('dbx_token');
+    document.getElementById('auth-area').innerHTML = `
+      <div class="alert alert-error">Connection failed: ${e.message}</div>
+      <button class="btn btn-blue" onclick="startAuth()">Try again</button>`;
+  }
 }
 
 function disconnect() {
@@ -781,7 +830,10 @@ async function uploadFile(file, destPath, onPct) {
       },
       file,
     );
-    if (!resp.ok) throw new Error(`Upload failed (${resp.status})`);
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      throw new Error(`Upload failed (${resp.status}): ${body.error_summary || JSON.stringify(body)}`);
+    }
     onPct(100);
     return;
   }

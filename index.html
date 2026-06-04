@@ -382,8 +382,9 @@ const TASKS = [
 // ═══════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════
-let accessToken = null;
-let videoFiles  = {}; // { taskNum (int) → File }
+let accessToken  = null;
+let pathRootHdr  = null; // Dropbox-API-Path-Root for team namespace
+let videoFiles   = {}; // { taskNum (int) → File }
 
 // ═══════════════════════════════════════════════════════════════
 //  INIT
@@ -481,6 +482,17 @@ async function verifyAndConnect() {
     }
     const acct = await acctResp.json();
     const email = acct.email || acct.name?.display_name || 'Unknown account';
+
+    // For Dropbox Business team accounts the team folder lives in the team
+    // root namespace, not the personal namespace the API defaults to.
+    // We must send Dropbox-API-Path-Root on every call to reach the right place.
+    const rootInfo = acct.root_info;
+    if (rootInfo && rootInfo.root_namespace_id !== rootInfo.home_namespace_id) {
+      pathRootHdr = JSON.stringify({
+        '.tag': 'namespace_id',
+        'namespace_id': rootInfo.root_namespace_id,
+      });
+    }
 
     // 2. Check the destination folder exists and is accessible
     const folderResp = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
@@ -792,11 +804,9 @@ function showErrors(containerId, errs) {
 //  DROPBOX API HELPERS
 // ═══════════════════════════════════════════════════════════════
 async function dbxPost(url, extraHeaders, body) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, ...extraHeaders },
-    body,
-  });
+  const headers = { Authorization: `Bearer ${accessToken}`, ...extraHeaders };
+  if (pathRootHdr) headers['Dropbox-API-Path-Root'] = pathRootHdr;
+  const resp = await fetch(url, { method: 'POST', headers, body });
   if (resp.status === 401) {
     accessToken = null;
     sessionStorage.removeItem('dbx_token');

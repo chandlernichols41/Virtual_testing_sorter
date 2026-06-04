@@ -317,11 +317,38 @@
           The access token used to authenticate with Dropbox is stored only in your browser's
           session memory and is automatically erased when you close the tab.</li>
     </ul>
-    <p style="font-size:13px;color:#444;line-height:1.6;background:#f9f9f9;padding:10px 12px;border-radius:6px;border-left:3px solid #c62828">
+    <p style="font-size:13px;color:#444;line-height:1.6;background:#f9f9f9;padding:10px 12px;border-radius:6px;border-left:3px solid #c62828;margin-bottom:16px">
       The data flow is equivalent to manually dragging files into the Dropbox desktop app —
       participant recordings go only to the lab's designated Dropbox folder and nowhere else.
       The full source code is publicly auditable at
       <strong>github.com/chandlernichols41/Virtual_testing_sorter</strong>.
+    </p>
+
+    <h3 style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:8px">🔒 Who can access this app</h3>
+    <p style="font-size:13px;color:#444;line-height:1.7;margin-bottom:10px">
+      The app URL is public, but access is protected by three independent layers.
+      Someone finding the link cannot do anything with it unless they clear all three.
+    </p>
+    <ul style="font-size:13px;color:#444;line-height:2;margin-left:18px;margin-bottom:10px">
+      <li><strong>Layer 1 — Dropbox login.</strong>
+          Clicking "Sign in to Dropbox" redirects to Dropbox's own login page.
+          The person must have a real Dropbox account and know its password.</li>
+      <li><strong>Layer 2 — Approved user list.</strong>
+          The app runs in Dropbox's restricted development mode. Any Dropbox account
+          not explicitly added to the approved user list is rejected by Dropbox
+          before a login token is ever issued. This is the error a non-approved user
+          sees ("user limit reached").</li>
+      <li><strong>Layer 3 — Dropbox folder membership.</strong>
+          Even if someone had an approved account, they could only upload to Dropbox folders
+          their account has been granted access to. If they are not a member of the
+          "ABC Virtual Testing Behavioral Data" folder, the app detects this and
+          blocks uploading entirely.</li>
+    </ul>
+    <p style="font-size:13px;color:#444;line-height:1.6;background:#f9f9f9;padding:10px 12px;border-radius:6px;border-left:3px solid #c62828">
+      <strong>Note on the App Key:</strong> The Dropbox App Key is visible in the page source,
+      but it cannot be misused on its own. It only identifies the application to Dropbox —
+      it is not a password or a credential. Anyone who extracts it still has to complete a
+      full Dropbox login with an account on the approved list before anything can happen.
     </p>
   </div>
 

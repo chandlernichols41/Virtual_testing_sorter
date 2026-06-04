@@ -293,6 +293,36 @@
       The app reads that digit and maps it to the task in the standard order above.
       If a task ran in a different slot, you can reassign it in the Task Names section before uploading.
     </p>
+
+    <h3 style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:8px;margin-top:18px">🔒 Privacy &amp; data security</h3>
+    <p style="font-size:13px;color:#444;line-height:1.7;margin-bottom:10px">
+      Because these recordings contain protected participant data, it is important to understand
+      exactly where files go when you use this app.
+    </p>
+    <ul style="font-size:13px;color:#444;line-height:2;margin-left:18px;margin-bottom:10px">
+      <li><strong>Videos never leave your computer except to go to Dropbox.</strong>
+          When you select a folder, the files are read into your browser's local memory only.
+          They are sent directly from your browser to Dropbox's servers — no intermediate stop.</li>
+      <li><strong>GitHub never sees the video files.</strong>
+          The GitHub server only delivers the app's HTML/JavaScript code when you first open the page.
+          Once loaded, GitHub is completely out of the picture.</li>
+      <li><strong>No backend server exists.</strong>
+          This app has no server of its own. It is a static webpage — all processing happens
+          locally in your browser. There is nowhere else for data to be stored or logged.</li>
+      <li><strong>No analytics or tracking.</strong>
+          The app contains no Google Analytics, error-reporting services, or any third-party
+          scripts. The only external connections made are to <em>dropbox.com</em> for
+          authentication and upload.</li>
+      <li><strong>Your Dropbox login token is temporary.</strong>
+          The access token used to authenticate with Dropbox is stored only in your browser's
+          session memory and is automatically erased when you close the tab.</li>
+    </ul>
+    <p style="font-size:13px;color:#444;line-height:1.6;background:#f9f9f9;padding:10px 12px;border-radius:6px;border-left:3px solid #c62828">
+      The data flow is equivalent to manually dragging files into the Dropbox desktop app —
+      participant recordings go only to the lab's designated Dropbox folder and nowhere else.
+      The full source code is publicly auditable at
+      <strong>github.com/chandlernichols41/Virtual_testing_sorter</strong>.
+    </p>
   </div>
 
   <!-- Disclaimer -->
